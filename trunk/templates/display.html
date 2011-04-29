@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+		<title>Make your voice heard</title>
+		<script type="text/javascript" src="/_ah/channel/jsapi"></script>
+		<script src="http://code.jquery.com/jquery-1.5.2.min.js"></script>
+		<script type="text/javascript" src="https://github.com/douglascrockford/JSON-js/raw/master/json2.js"></script>	
+	    <script type='text/javascript' src='https://www.google.com/jsapi'></script>
+		<script type="text/javascript">
+		
+				var clientCount = 0.0;
+				var clientTotal = 0.0;
+				var data = {};
+				var chart;
+				var chartData;
+				var chartOptions = {};
+				
+				function supports_html5_storage() {
+					try {
+						return 'localStorage' in window && window['localStorage'] !== null;
+					} catch (e) {
+						return false;
+					}
+				}
+				
+				function updateData(str) {
+					vals = str.split(",");
+					channelId = vals[0];
+					sentiment = parseInt(vals[1]);
+					if (isNaN(sentiment)) {
+						sentiment = -1;
+					}
+					if (sentiment < 0) {
+						if (data.hasOwnProperty(channelId)) {
+							if (data[channelId].hasOwnProperty('sentiment')) {
+								if (!isNaN(data[channelId]['sentiment'])) {
+									clientTotal = clientTotal - data[channelId]['sentiment'];
+								}
+							}
+							delete data[channelId];
+						}
+					} else {
+						if (!data.hasOwnProperty(channelId)) {
+							data[channelId] = {};
+							clientTotal+= sentiment;
+						} else {
+							clientTotal = (clientTotal + sentiment - data[channelId]['sentiment']);
+						}
+						data[channelId]['checkin'] = new Date().getTime();
+						data[channelId]['sentiment'] = sentiment;
+					}
+					clientCount = Object.keys(data).length;
+					
+				}
+
+				function cleanData() {
+					
+					now = new Date().getTime();
+					newdata = {};
+					tmpTotal = 0;
+					
+					for (i in data) {
+						if (data[i].hasOwnProperty('checkin')) {
+							diff = now - data[i]['checkin'];
+							if (diff < 60000) {
+								newdata[i] = data[i];
+								if (data[i].hasOwnProperty('sentiment')) {
+									if (!isNaN(data[i]['sentiment'])) {
+										tmpTotal += data[i]['sentiment'];
+									}
+								}
+							}
+						}
+					}
+					data = newdata;
+					clientCount = Object.keys(data).length;
+					clientTotal = tmpTotal;
+					if (supports_html5_storage) {
+						localStorage.setItem("appnationadmin", JSON.stringify(data));
+					}
+					
+				}
+
+
+				function drawChart() {
+					chartData = new google.visualization.DataTable();
+					chartData.addColumn('string', 'Label');
+					chartData.addColumn('number', 'Value');
+					chartData.addRows(1);
+					chartData.setValue(0, 0, '');
+					chartData.setValue(0, 1, 50);
+					chart = new google.visualization.Gauge(document.getElementById('visualization'));
+					chartOptions = {
+						width: 500,
+						height: 500,
+						greenFrom: 75,
+						greenTo: 100,
+						redFrom:0,
+						redTo: 25,
+						minorTicks: 3,
+						majorTicks:['', '', '', '', '', '', '', '','']
+					};
+					
+					var socket = channel.open();
+					socket.onopen = function() {};
+					socket.onmessage = function(obj) {
+						updateData(obj.data);
+						updateVisualization();
+					};
+					socket.onerror = function() {};
+					socket.onclose = function() {};
+					setInterval(cleanData, 60000);
+					updateVisualization();
+				}
+
+				function updateVisualization() {
+	
+					if (clientCount > 0) {
+						newValue = (clientTotal / clientCount) * 50.0;
+						newValue = Math.max(0, Math.min(Math.round(newValue), 100));
+						chartData.setValue(0, 1, newValue);
+					} else {
+						chartData.setValue(0, 1, 50);
+					}
+					chart.draw(chartData, chartOptions);
+					
+				
+				}
+
+				
+		</script>
+		
+			<style type="text/css">
+				* { margin: 0; padding: 0; }
+				body {
+					font: .8em Helvetica, Arial, sans-serif;
+					margin: 20px;
+					padding: 0;
+					background: #000;
+				    text-align: center;
+					color:#fff;
+				}
+				#container {
+				   height:700px;
+				   width: 900px;
+				   margin: auto;
+				}
+				h1 {
+					font-size: 3.7em;
+				}
+				h3 {
+					font-size: 1.8em;
+				}
+				#visualization {
+					width: 502px;
+					margin: auto;
+				}
+				#logo {
+					position:absolute;
+					bottom:0;
+					left: 10px;
+					width: 890px;
+					height: 73px;
+					background: #000;
+					background-image: url(http://www.rga.com/_assets/img/logo.png);
+					background-position: 0px -73px;
+					background-repeat: no-repeat;
+					z-index: -1;
+				}
+			</style>
+				
+	</head>
+	<body>
+		<div id="container">
+			<h1>The Crowd Says</h1>
+			<h3>Join the conversation!&nbsp;&nbsp;http://thecrowdsays.appspot.com/</h3>
+			<div id="visualization"></div>
+			<div id="logo"></div>
+		</div>
+		<script>
+			
+			if (supports_html5_storage()) {
+				tmpdata = localStorage.getItem("appnationadmin");
+				if (tmpdata != null) {
+					data = JSON.parse(tmpdata);
+				}
+				for (i in data) {
+					if (data[i].hasOwnProperty['sentiment']) {
+						clientTotal+= data[i]['sentiment'];
+					}
+				}
+				clientCount = Object.keys(data).length;
+			}
+			
+			cleanData();
+			google.load('visualization', '1', {packages:['gauge']});
+			google.setOnLoadCallback(drawChart);
+			
+			var id = '{{id}}';
+			var channel = new goog.appengine.Channel('{{token}}');
+			
+		</script>
+		
+	</body>
+</html>
+
+

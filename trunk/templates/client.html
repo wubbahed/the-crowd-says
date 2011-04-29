@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+		<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+		<title>Make your voice heard</title>
+		
+		<link rel="stylesheet" href="http://code.jquery.com/mobile/1.0a4.1/jquery.mobile-1.0a4.1.min.css" />
+		<script type="text/javascript" src="/_ah/channel/jsapi"></script>	
+		<script src="http://code.jquery.com/jquery-1.5.2.min.js"></script>
+		<script src="http://code.jquery.com/mobile/1.0a4.1/jquery.mobile-1.0a4.1.min.js"></script>
+		<script type="text/javascript">
+		
+			var connected = true;
+						
+			function supports_html5_storage() {
+				try {
+					return 'localStorage' in window && window['localStorage'] !== null;
+				} catch (e) {
+					return false;
+				}
+			}
+			
+			function updatePreference(id, val) {
+				url = 'update?id=' + escape(id) + '&p=' + val;
+				// console.log("updating - "+ url);
+				if (connected) {
+					var xhr = new XMLHttpRequest();
+					xhr.open('POST', url, true);
+					xhr.send();
+				}
+			}
+			
+			function cleanPreviousConnections() {
+				if (supports_html5_storage()) {
+					tmpId = localStorage.getItem("appnation_channelId");
+					if (tmpId != null) {
+						if (tmpId != myId) {
+							updatePreference(tmpId, -1);
+						}
+					}
+					localStorage.setItem("appnation_channelId", myId);
+				}
+			}
+			
+			function phoneHome() {
+				val = $('input:radio[name=sentiment]:checked').val();
+				updatePreference(myId, val);
+			}
+			
+			$(document).ready(function() {
+			    $('#radiogroup input:radio').change(phoneHome);
+			});
+			
+		</script>
+		
+		<style type="text/css">
+		body {
+			background: #000;
+		}
+		.ui-page {
+			min-height:100% !important; 
+		}
+		</style>
+	</head>
+	<body>
+		<div data-role="page">
+			<div data-role="header" >
+				<h1>Make your voice heard</h1>
+			</div>
+			<div data-role="content" data-theme="a" style="padding:20px">
+				<H2>What do you think?</h2>
+				<div id="radiogroup" data-role="fieldcontain">
+				    <fieldset data-role="controlgroup">
+				        <input type="radio" name="sentiment" id="disagree" value="0" />
+			         	<label for="disagree">Disagree</label>
+			         	<input type="radio" name="sentiment" id="neutral" value="1" checked="checked" />
+			         	<label for="neutral">Don't Care</label>
+			         	<input type="radio" name="sentiment" id="agree" value="2"  />
+			         	<label for="agree">Agree</label>
+				    </fieldset>
+				</div>
+				<h1>&nbsp;</h1>
+			</div> 
+			<div data-role="footer" >
+				<h4>created by <a href="http://www.rga.com/" style="color:#E51837">R/GA</a></h4>
+			</div>
+		</div>
+	
+		<script>
+			var myId = '{{ id }}';
+			setInterval(phoneHome, 15000);
+		</script>
+		
+	</body>
+</html>
+
+
